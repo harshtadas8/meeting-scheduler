@@ -7,19 +7,25 @@ import { calendar } from '../../../../lib/googleCalendar';
 // --- DELETE METHOD (Cancellation) ---
 export async function DELETE(
   request: Request,
-  { params }: { params: Promise<{ id: string }> } // <-- CHANGED THIS LINE
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const resolvedParams = await params;
     const bookingId = resolvedParams.id;
 
-    // VERCEL FIX: Use /tmp in production
     const isProd = process.env.NODE_ENV === 'production';
     const dataDir = isProd ? '/tmp' : path.join(process.cwd(), 'data');
     const filePath = path.join(dataDir, 'bookings.json');
 
-    const fileData = await fs.readFile(filePath, 'utf8');
-    let bookings = JSON.parse(fileData);
+    // Robust file reading
+    let bookings = [];
+    try {
+      const fileData = await fs.readFile(filePath, 'utf8');
+      bookings = JSON.parse(fileData);
+    } catch (readError) {
+      console.error("File not found or empty. Production instance may have reset.");
+      return NextResponse.json({ success: false, error: 'Booking record not found. Please schedule a new meeting.' }, { status: 404 });
+    }
 
     const bookingIndex = bookings.findIndex((b: any) => b.id === bookingId);
     
@@ -55,7 +61,6 @@ export async function DELETE(
         day: 'numeric', month: 'long', year: 'numeric'
       });
 
-      // VERCEL FIX: Dynamic Base URL
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
       await transporter.sendMail({
@@ -85,9 +90,9 @@ export async function DELETE(
 
     return NextResponse.json({ success: true, message: 'Booking cancelled successfully' }, { status: 200 });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error cancelling booking:', error);
-    return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }
 
@@ -95,7 +100,7 @@ export async function DELETE(
 // --- PATCH METHOD (Rescheduling) ---
 export async function PATCH(
   request: Request,
-  { params }: { params: Promise<{ id: string }> } // <-- CHANGED THIS LINE
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const resolvedParams = await params;
@@ -107,13 +112,19 @@ export async function PATCH(
       return NextResponse.json({ success: false, error: 'New date and time are required.' }, { status: 400 });
     }
 
-    // VERCEL FIX: Use /tmp in production
     const isProd = process.env.NODE_ENV === 'production';
     const dataDir = isProd ? '/tmp' : path.join(process.cwd(), 'data');
     const filePath = path.join(dataDir, 'bookings.json');
 
-    const fileData = await fs.readFile(filePath, 'utf8');
-    let bookings = JSON.parse(fileData);
+    // Robust file reading
+    let bookings = [];
+    try {
+      const fileData = await fs.readFile(filePath, 'utf8');
+      bookings = JSON.parse(fileData);
+    } catch (readError) {
+      console.error("File not found or empty. Production instance may have reset.");
+      return NextResponse.json({ success: false, error: 'Booking record not found. Please schedule a new meeting.' }, { status: 404 });
+    }
 
     const bookingIndex = bookings.findIndex((b: any) => b.id === bookingId);
     
@@ -127,8 +138,6 @@ export async function PATCH(
     // 1. Update Google Calendar
     if (booking.eventId) {
       try {
-        console.log(`🔄 Attempting to update Google Calendar event: ${booking.eventId}`);
-        
         const startDateTime = new Date(`${newDate}T${newTime}:00`);
         const endDateTime = new Date(startDateTime.getTime() + 30 * 60000);
 
@@ -141,7 +150,6 @@ export async function PATCH(
             end: { dateTime: endDateTime.toISOString(), timeZone: timezone },
           }
         });
-        console.log('✅ Google Calendar event updated successfully.');
       } catch (calError: any) {
         console.error('⚠️ Failed to update Google Calendar event:', calError?.message || calError);
       }
@@ -171,7 +179,6 @@ export async function PATCH(
       });
       const displayLink = booking.meetLink || 'Google Meet (Link pending)';
 
-      // VERCEL FIX: Dynamic Base URL
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
 
       await transporter.sendMail({
@@ -198,15 +205,14 @@ export async function PATCH(
           </div>
         `,
       });
-      console.log("✅ Custom reschedule email sent to:", booking.email);
     } catch (emailError) {
       console.error("❌ Failed to send reschedule email:", emailError);
     }
 
     return NextResponse.json({ success: true, message: 'Booking rescheduled successfully' }, { status: 200 });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error rescheduling booking:', error);
-    return NextResponse.json({ success: false, error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ success: false, error: error.message || 'Internal Server Error' }, { status: 500 });
   }
 }
