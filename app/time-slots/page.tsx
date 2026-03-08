@@ -1,6 +1,18 @@
 import Calendar from '@/components/Calendar';
+import TimeSlotGrid from '@/components/TimeSlotGrid';
 
-export default function Home() {
+type Props = {
+  searchParams: Promise<{ date?: string }>;
+};
+
+export default async function TimeSlotsPage({ searchParams }: Props) {
+  const resolvedParams = await searchParams;
+  const selectedDate = resolvedParams.date || '';
+
+  const displayDate = selectedDate
+    ? new Date(selectedDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+    : 'Select a date';
+
   return (
     <main className="min-h-screen bg-[#F9FAFB] flex flex-col items-center pt-12 p-4 font-sans">
       
@@ -34,12 +46,12 @@ export default function Home() {
         
         {/* Left Side */}
         <div className="w-full md:w-[45%]">
-          <Calendar />
+          <Calendar selectedDate={selectedDate} />
         </div>
 
         {/* Right Side */}
-        <div className="w-full md:w-[55%] p-8 md:p-10 flex flex-col">
-          <div className="mb-6">
+        <div className="w-full md:w-[55%] p-8 md:p-10 flex flex-col h-[550px]">
+          <div className="mb-6 shrink-0">
             <h3 className="text-[15px] font-bold text-[#1F2937] mb-2">Meeting location</h3>
             <div className="flex items-center gap-2 text-[15px] text-gray-600">
               <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
@@ -50,21 +62,26 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="mb-8">
+          <div className="mb-8 shrink-0">
             <h3 className="text-[15px] font-bold text-[#1F2937] mb-2">Meeting duration</h3>
             <div className="bg-[#cbd5e1] text-[#475569] text-[13px] py-1.5 rounded-sm flex items-center justify-center w-full font-medium">
               30 mins
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col">
+          <div className="flex-1 flex flex-col overflow-hidden">
             <h3 className="text-[15px] font-bold text-[#1F2937] mb-1">What time works best?</h3>
-            <p className="text-sm text-gray-500 mb-6">
-              Showing times for <span className="font-bold text-[#1F2937]">Select a date</span>
+            <p className="text-sm text-gray-500 mb-4">
+              Showing times for <span className="font-bold text-[#1F2937]">{displayDate}</span>
             </p>
-            <div className="flex-1 flex items-center justify-center text-gray-400 text-sm border-2 border-dashed border-gray-100 rounded-md p-4 text-center">
-              Please select a date from the calendar.
-            </div>
+            
+            {selectedDate ? (
+              <TimeSlotGrid selectedDate={selectedDate} />
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-gray-400">
+                Please select a date from the calendar.
+              </div>
+            )}
           </div>
         </div>
       </div>
