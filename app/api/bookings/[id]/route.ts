@@ -7,7 +7,7 @@ import { calendar } from '../../../../lib/googleCalendar';
 // --- DELETE METHOD (Cancellation) ---
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> } // <-- CHANGED THIS LINE
 ) {
   try {
     const resolvedParams = await params;
@@ -95,7 +95,7 @@ export async function DELETE(
 // --- PATCH METHOD (Rescheduling) ---
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> } // <-- CHANGED THIS LINE
 ) {
   try {
     const resolvedParams = await params;
